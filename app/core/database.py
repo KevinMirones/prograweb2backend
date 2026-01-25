@@ -19,7 +19,9 @@ if not all([HOST_DB, PORT_DB, NAME_DB, USER_DB, PASSWORD_DB]):
     missing = [var for var in ["HOST_DB", "PORT_DB", "NAME_DB", "USER_DB", "PASSWORD_DB"] if not os.getenv(var)]
     raise ValueError(f"Missing environment variables: {', '.join(missing)}")
 
-DATABASE_URL = f"postgresql+psycopg2://{USER_DB}:{PASSWORD_DB}@{HOST_DB}:{PORT_DB}/{NAME_DB}"
+#DATABASE_URL = f"postgresql+psycopg2://{USER_DB}:{PASSWORD_DB}@{HOST_DB}:{PORT_DB}/{NAME_DB}"
+DATABASE_URL = f"mysql+pymysql://{USER_DB}:{PASSWORD_DB}@{HOST_DB}:{PORT_DB}/{NAME_DB}"
+
 # Create engine
 engine = create_engine(DATABASE_URL, echo=True)
 
