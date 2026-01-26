@@ -30,7 +30,7 @@ def handle_get_equipo(session: Session, equipo_id: int) -> Dict[str, object]:
 
 def handle_list_equipos(session: Session) -> Dict[str, object]:
     equipos = get_all_active_equipos(session)
-    return {"data": equipos, "msg": "Equipos obtenidos existosamente."}
+    return {"data": equipos, "msg": "Equipos obtenidos exitosamente."}
 
 
 def handle_update_equipo(context: CurrentContext, equipo_id: int, data: EquipoUpdate) -> Dict[str, object]:

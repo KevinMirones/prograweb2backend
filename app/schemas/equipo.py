@@ -28,7 +28,7 @@ class Equipo(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
-            "created_at_cli",
+            "created_at_equ",
             DateTime(timezone=True),
             nullable=False,
             server_default=text("CURRENT_TIMESTAMP"),
@@ -37,7 +37,7 @@ class Equipo(SQLModel, table=True):
     updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
-            "updated_at_cli",
+            "updated_at_equ",
             DateTime(timezone=True),
             nullable=False,
             server_default=text("CURRENT_TIMESTAMP"),
@@ -45,11 +45,11 @@ class Equipo(SQLModel, table=True):
     )
     deleted_at: Optional[datetime] = Field(
         default=None,
-        sa_column=Column("deleted_at_cli", DateTime(timezone=True), nullable=True),
+        sa_column=Column("deleted_at_equ", DateTime(timezone=True), nullable=True),
     )
     is_deleted: bool = Field(
         default=False,
-        sa_column=Column("is_deleted_cli", Boolean, nullable=False, server_default="0"),
+        sa_column=Column("is_deleted_equ", Boolean, nullable=False, server_default="0"),
     )
     tipo_equipo: Optional["TipoEquipo"] = Relationship(back_populates="equipos")
     dueno: Optional["Cliente"] = Relationship(back_populates="equipos")

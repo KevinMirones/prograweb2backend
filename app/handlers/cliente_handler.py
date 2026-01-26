@@ -38,7 +38,7 @@ def handle_get_cliente(session: Session, cliente_id: int) -> Dict[str, object]:
 
 def handle_list_clientes(session: Session) -> Dict[str, object]:
     clientes = get_all_active_clientes(session)
-    return {"data": clientes, "msg": "Clientes obtenidos existosamente."}
+    return {"data": clientes, "msg": "Clientes obtenidos exitosamente."}
 
 
 def handle_update_cliente(

@@ -30,7 +30,7 @@ def handle_get_tipo(session: Session, tipo_id: int) -> Dict[str, object]:
 
 def handle_list_tipos(session: Session) -> Dict[str, object]:
     tipos = get_all_active_tipos(session)
-    return {"data": tipos, "msg": "Tipos obtenidos existosamente."}
+    return {"data": tipos, "msg": "Tipos obtenidos exitosamente."}
 
 
 def handle_update_tipo(context: CurrentContext, tipo_id: int, data: TipoEquipoUpdate) -> Dict[str, object]:
