@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routers.routes_v1 import api_router_v1
+from app.routers import auth, chat
 from fastapi.middleware.cors import CORSMiddleware
 
 PROJECT_NAME = "PROYECTO_PROGRAMACIÓN_WEB_II"
@@ -23,3 +24,5 @@ app.add_middleware(
 )
 
 app.include_router(api_router_v1, prefix=API_V1_STR)
+app.include_router(auth.router, prefix=API_V1_STR)
+app.include_router(chat.router, prefix=API_V1_STR)

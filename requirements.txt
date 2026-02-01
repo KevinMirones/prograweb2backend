@@ -40,3 +40,8 @@ typing_extensions==4.15.0
 uvicorn==0.38.0
 watchfiles==1.1.1
 websockets==15.0.1
+google-generativeai
+passlib
+bcrypt==3.2.2
+python-jose[cryptography]
+fastapi-mail
