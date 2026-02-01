@@ -12,7 +12,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 # model = genai.GenerativeModel('gemini-1.5-flash')
-model = genai.GenerativeModel('gemini-1.5-flash')
+# model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-flash-latest')
 
 def get_context(db: Session) -> str:
     # Retrieve relevant data for context
@@ -46,5 +47,9 @@ async def generate_chat_response(query: str, db: Session) -> str:
     Answer:
     """
     
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = await model.generate_content_async(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error calling Gemini API: {e}")
+        return "Lo siento, hubo un error al procesar tu solicitud. Por favor intenta de nuevo más tarde."
