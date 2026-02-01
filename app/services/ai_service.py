@@ -9,19 +9,29 @@ from app.schemas.equipo import Equipo
 load_dotenv()
 
 from google.ai.generativelanguage_v1beta.types import content
-from app.services.tools import create_client_tool, create_service_tool
+from app.services.tools import (
+    create_client_tool, 
+    create_service_tool,
+    create_tipo_equipo_tool,
+    create_tecnico_tool,
+    create_equipo_tool,
+    create_cotizacion_tool
+)
+from app.schemas.tipo_equipo import TipoEquipo
+from app.schemas.tecnico import Tecnico
+from app.schemas.cliente import Cliente
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
-
-# model = genai.GenerativeModel('gemini-1.5-flash')
-# model = genai.GenerativeModel('gemini-1.5-flash')
-model = genai.GenerativeModel('gemini-2.0-flash')
 
 # Define the tools map for execution
 available_tools = {
     "create_client": create_client_tool,
     "create_service": create_service_tool,
+    "create_tipo_equipo": create_tipo_equipo_tool,
+    "create_tecnico": create_tecnico_tool,
+    "create_equipo": create_equipo_tool,
+    "create_cotizacion": create_cotizacion_tool,
 }
 
 # Define the tool definitions for Gemini
@@ -54,6 +64,59 @@ tools_schema = [
                     },
                     "required": ["nombre", "descripcion", "precio"]
                 }
+            },
+            {
+                "name": "create_tipo_equipo",
+                "description": "Create a category of equipment (e.g. Laptop, Printer).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "nombre": {"type": "string", "description": "Name of the type"},
+                        "descripcion": {"type": "string", "description": "Description"},
+                    },
+                    "required": ["nombre", "descripcion"]
+                }
+            },
+            {
+                "name": "create_tecnico",
+                "description": "Register a new technician.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "nombre": {"type": "string", "description": "First name"},
+                        "apellido_paterno": {"type": "string", "description": "Paternal last name"},
+                        "apellido_materno": {"type": "string", "description": "Maternal last name"},
+                        "telefono": {"type": "string", "description": "Phone number"},
+                    },
+                    "required": ["nombre", "apellido_paterno", "apellido_materno"]
+                }
+            },
+            {
+                "name": "create_equipo",
+                "description": "Register a specific device for a client.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "marca": {"type": "string", "description": "Brand of the device (e.g. Dell)"},
+                        "modelo": {"type": "string", "description": "Model of the device"},
+                        "id_tipo_equipo": {"type": "integer", "description": "ID of the Equipment Type"},
+                        "id_dueno": {"type": "integer", "description": "ID of the Client (Owner)"},
+                    },
+                    "required": ["marca", "modelo", "id_tipo_equipo", "id_dueno"]
+                }
+            },
+            {
+                "name": "create_cotizacion",
+                "description": "Create a new quote request.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "id_cliente": {"type": "integer", "description": "ID of the Client"},
+                        "id_equipo": {"type": "integer", "description": "ID of the Equipment"},
+                        "descripcion_falla": {"type": "string", "description": "Description of the failure"},
+                    },
+                    "required": ["id_cliente", "id_equipo", "descripcion_falla"]
+                }
             }
         ]
     }
@@ -61,20 +124,35 @@ tools_schema = [
 
 # model = genai.GenerativeModel('gemini-2.0-flash', tools=tools_schema)
 model = genai.GenerativeModel('gemini-flash-latest', tools=tools_schema)
+# model = genai.GenerativeModel('gemini-1.5-flash', tools=tools_schema)
 
 def get_context(db: Session) -> str:
     # Retrieve relevant data for context
-    # Limiting to recent items to avoid token limits detailed info
     servicios = db.exec(select(Servicio).limit(10)).all()
     equipos = db.exec(select(Equipo).limit(10)).all()
+    tipos_equipo = db.exec(select(TipoEquipo).limit(10)).all()
+    tecnicos = db.exec(select(Tecnico).limit(10)).all()
+    clientes = db.exec(select(Cliente).limit(10)).all()
     
-    context_str = "Available Services:\n"
+    context_str = "--- DATABASE CONTEXT ---\n"
+    
+    context_str += "Services (ID | Name | Price):\n"
     for s in servicios:
-        context_str += f"- {s.nombre}: {s.descripcion} (${s.precio})\n"
+        context_str += f"- {s.id}: {s.nombre} (${s.precio})\n"
         
-    context_str += "\nRegistered Equipment Types:\n"
-    for e in equipos:
-        context_str += f"- {e.marca} {e.modelo} ({e.tipo_equipo_id})\n"
+    context_str += "\nEquipment Categories (ID | Name):\n"
+    for te in tipos_equipo:
+        context_str += f"- {te.id}: {te.nombre}\n"
+        
+    context_str += "\nTechnicians (ID | Name):\n"
+    for t in tecnicos:
+        context_str += f"- {t.id}: {t.nombre} {t.apellido_paterno}\n"
+        
+    context_str += "\nClients (ID | Name):\n"
+    for c in clientes:
+        context_str += f"- {c.id}: {c.nombre} {c.apellido_paterno}\n"
+        
+    context_str += "--- END CONTEXT ---\n"
         
     return context_str
 
