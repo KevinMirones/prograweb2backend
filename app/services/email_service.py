@@ -1,62 +1,85 @@
-import os
 import asyncio
-from typing import List
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-from pydantic import EmailStr
+import os
+import aiohttp
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuration with increased timeout and proper SSL settings
-MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
-MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")  # MUST be App Password for Gmail
-MAIL_FROM = os.getenv("MAIL_FROM", MAIL_USERNAME)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Critical: Use SSL on port 465 instead of STARTTLS on 587
-conf = ConnectionConfig(
-    MAIL_USERNAME=MAIL_USERNAME,
-    MAIL_PASSWORD=MAIL_PASSWORD,
-    MAIL_FROM=MAIL_FROM,
-    MAIL_PORT=465,  # Changed from 587 to 465
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=False,  # Disabled for SSL
-    MAIL_SSL_TLS=True,  # Enabled for SSL
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-    TIMEOUT=30,  # Increased timeout
-    MAIL_DEBUG=1  # Enable debugging
-)
-
-async def send_mfa_code(email: EmailStr, code: str):
+async def send_mfa_code(email: str, code: str) -> bool:
     """
-    Send MFA code with timeout handling
+    Send MFA code using Resend API (works on Render)
     """
-    html = f"""
-    <p>Your verification code is: <strong>{code}</strong></p>
-    <p>This code will expire in 10 minutes.</p>
-    """
+    RESEND_API_KEY = os.getenv("RESEND_API_KEY")
     
-    message = MessageSchema(
-        subject="Your Verification Code",
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html
-    )
-
-    fm = FastMail(conf)
+    if not RESEND_API_KEY:
+        logger.error(" RESEND_API_KEY not set in environment variables")
+        logger.info(f" [FALLBACK] MFA Code for {email}: {code}")
+        return False
+    
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Your sender email (you'll need to verify it in Resend dashboard first)
+    # For testing, use the default Resend email
+    sender_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+    
+    data = {
+        "from": sender_email,
+        "to": [email],
+        "subject": "Tu código de verificación",
+        "html": f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px 10px 0 0; color: white;">
+                <h1 style="margin: 0;">Código de Verificación</h1>
+            </div>
+            <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0;">
+                <p>Hola,</p>
+                <p>Tu código de verificación es:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #667eea; padding: 20px; background: white; border-radius: 8px; display: inline-block; border: 2px dashed #667eea;">
+                        {code}
+                    </div>
+                </div>
+                <p>Este código expirará en <strong>10 minutos</strong>.</p>
+                <p>Si no solicitaste este código, ignora este correo.</p>
+                <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+                <p style="color: #666; font-size: 12px;">
+                    Este es un mensaje automático, por favor no respondas a este correo.
+                </p>
+            </div>
+        </div>
+        """
+    }
     
     try:
-        # Add timeout to prevent hanging
-        await asyncio.wait_for(fm.send_message(message), timeout=30)
-        print(f"✅ Email sent successfully to {email}")
-        return True
+        logger.info(f" Sending MFA code to {email} via Resend API")
+        logger.info(f" Code: {code}")
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=data, timeout=10) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    logger.info(f" Email sent successfully via Resend. ID: {result.get('id')}")
+                    return True
+                else:
+                    error_text = await response.text()
+                    logger.error(f" Resend API error: {response.status} - {error_text}")
+                    logger.info(f" [FALLBACK] MFA Code for {email}: {code}")
+                    return False
+                    
     except asyncio.TimeoutError:
-        print("❌ Email sending timed out after 30 seconds")
-        # Fallback to console output for debugging
-        print(f"📧 [FALLBACK] MFA Code for {email}: {code}")
+        logger.error(" Resend API timeout after 10 seconds")
+        logger.info(f"[FALLBACK] MFA Code for {email}: {code}")
         return False
     except Exception as e:
-        print(f"❌ Failed to send email to {email}: {str(e)}")
-        # Fallback to console output
-        print(f"📧 [FALLBACK] MFA Code for {email}: {code}")
+        logger.error(f" Exception sending email via Resend: {str(e)}")
+        logger.info(f" [FALLBACK] MFA Code for {email}: {code}")
         return False

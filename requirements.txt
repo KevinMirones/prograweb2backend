@@ -45,3 +45,4 @@ passlib
 bcrypt==3.2.2
 python-jose[cryptography]
 fastapi-mail
+aiohttp>=3.9.0
