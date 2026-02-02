@@ -128,17 +128,21 @@ model = genai.GenerativeModel('gemini-flash-latest', tools=tools_schema)
 
 def get_context(db: Session) -> str:
     # Retrieve relevant data for context
-    servicios = db.exec(select(Servicio).limit(10)).all()
-    equipos = db.exec(select(Equipo).limit(10)).all()
-    tipos_equipo = db.exec(select(TipoEquipo).limit(10)).all()
-    tecnicos = db.exec(select(Tecnico).limit(10)).all()
-    clientes = db.exec(select(Cliente).limit(10)).all()
+    servicios = db.exec(select(Servicio).where(Servicio.is_deleted == False).limit(10)).all()
+    equipos = db.exec(select(Equipo).where(Equipo.is_deleted == False).limit(10)).all()
+    tipos_equipo = db.exec(select(TipoEquipo).where(TipoEquipo.is_deleted == False).limit(10)).all()
+    tecnicos = db.exec(select(Tecnico).where(Tecnico.is_deleted == False).limit(10)).all()
+    clientes = db.exec(select(Cliente).where(Cliente.is_deleted == False).limit(10)).all()
     
     context_str = "--- DATABASE CONTEXT ---\n"
     
     context_str += "Services (ID | Name | Price):\n"
     for s in servicios:
         context_str += f"- {s.id}: {s.nombre} (${s.precio})\n"
+        
+    context_str += "\nEquipments (ID | Brand | Model):\n"
+    for e in equipos:
+        context_str += f"- {e.id}: {e.marca} {e.modelo}\n"
         
     context_str += "\nEquipment Categories (ID | Name):\n"
     for te in tipos_equipo:
