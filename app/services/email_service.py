@@ -3,7 +3,6 @@ from typing import List
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr
 from dotenv import load_dotenv
-import logging
 
 load_dotenv()
 
@@ -37,10 +36,4 @@ async def send_mfa_code(email: EmailStr, code: str):
     )
 
     fm = FastMail(conf)
-    logger = logging.getLogger(__name__)
-    try:
-        await fm.send_message(message)
-    except Exception as e:
-        logger.exception("Failed to send MFA email to %s", email)
-        # swallow exceptions so the application flow isn't interrupted by SMTP failures
-        return
+    await fm.send_message(message)
