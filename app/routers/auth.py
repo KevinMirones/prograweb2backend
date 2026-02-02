@@ -3,7 +3,7 @@ from typing import Any
 import secrets
 import string
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, BackgroundTasks
 from sqlmodel import Session, select
 from app.core.database import get_db
 from app.schemas.user import User, UserCreate, UserRead, UserLogin
@@ -38,7 +38,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 async def login(
     login_data: UserLogin,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests
@@ -52,16 +53,16 @@ async def login(
     # MFA Logic
     if user.mfa_enabled:
         if not login_data.mfa_code:
-            # Generate and send code
+            # Generate and schedule sending code (non-blocking)
             code = generate_verification_code()
             user.mfa_secret = code # In production store this with expiration!
             db.add(user)
             db.commit()
-            
-            # Send Email
-            await send_mfa_code(user.email, code)
-            
-            return {"message": "MFA code sent", "mfa_required": True}
+
+            # Send Email in background to avoid request failure on SMTP timeouts
+            background_tasks.add_task(send_mfa_code, user.email, code)
+
+            return {"message": "MFA code scheduled", "mfa_required": True}
         else:
             # Verify code
             if user.mfa_secret != login_data.mfa_code:
